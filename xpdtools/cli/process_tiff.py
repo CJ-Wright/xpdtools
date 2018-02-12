@@ -148,7 +148,8 @@ def main(poni_file=None, image_files=None, bg_file=None, mask_file=None,
 
     if image_files is None:
         img_filenames = [i for i in os.listdir('.') if
-                         os.path.splitext(i)[-1] in img_extensions]
+                         os.path.splitext(i)[-1] in img_extensions
+                         and '_zscore' not in i]
         # TODO: Test non tiff files
         if all([f.endswith('.tiff') or f.endswith('.tif') for f in
                 img_filenames]):

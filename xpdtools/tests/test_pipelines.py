@@ -150,7 +150,7 @@ def test_tomo_piecewise_pipeline():
     ns["center"].emit(2.5)
 
     # np.random.seed(42)
-    k = 0
+    k = 1
     for i, x in enumerate(x_linspace):
         for j, th in enumerate(th_linspace):
             ns["seq_num"].emit(k)

@@ -1,6 +1,7 @@
 import numpy as np
 import tomopy
 from rapidz import no_default
+import operator as op
 
 
 def recon_wrapper(projection, theta, center, **kwargs):
@@ -187,7 +188,7 @@ def tomo_prep(
         .map(np.deg2rad)
     )
     # use np.unravel_index and seq_num to dead recon our position in the scan
-    pos = seq_num.combine_latest(dims, emit_on=0).starmap(np.unravel_index)
+    pos = seq_num.map(op.add, -1).combine_latest(dims, emit_on=0).starmap(np.unravel_index)
     # pos.sink(print)
     x_pos = pos.combine_latest(translation_position, emit_on=0).starmap(
         lambda x, y: x[y]

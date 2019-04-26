@@ -1,0 +1,13 @@
+**Added:** None
+
+**Changed:** None
+
+**Deprecated:** None
+
+**Removed:** None
+
+**Fixed:**
+
+* Use ``seq_num`` and ``np.unravel_index`` to determine the position in the sinogram, supporting grid_scans
+
+**Security:** None

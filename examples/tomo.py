@@ -48,7 +48,7 @@ qoi = Stream()
 #     th_extents.scatter(backend=backend),
 #     x_extents.scatter(backend=backend),
 # )
-ns = tomo_prep(x, th, th_dim, x_dim, th_extents, x_extents)
+ns = tomo_prep(th_dim, th_extents)
 # ns2 = tomo_pipeline_piecewise(
 #     qoi.scatter(backend=backend),
 #     center=center.scatter(backend=backend),

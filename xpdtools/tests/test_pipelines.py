@@ -8,7 +8,8 @@ from xpdtools.pipelines.qoi import (
     max_intensity_mean,
     max_gr_mean,
     pca_pipeline,
-    amorphsivity_pipeline)
+    amorphsivity_pipeline,
+)
 from xpdtools.pipelines.radiograph import average, unique_data
 from xpdtools.pipelines.raw_pipeline import (
     pipeline_order,
@@ -119,13 +120,16 @@ def test_qoi_pipeline():
 def test_tomo_piecewise_pipeline():
     ns = dict(
         qoi=Stream(),
-        x=Stream(),
-        th=Stream(),
-        th_dim=Stream(),
-        x_dim=Stream(),
-        th_extents=Stream(),
-        x_extents=Stream(),
+        x_pos=Stream(),
+        th_pos=Stream(),
         center=Stream(),
+        th_ext=Stream(),
+        dims=Stream(),
+        th_dim=Stream(),
+        th_extents=Stream(),
+        seq_num=Stream(),
+        translation_position=Stream(),
+        rotation_position=Stream(),
     )
     x_linspace = np.linspace(0, 5, 6)
     th_linspace = np.linspace(0, 180, 6)
@@ -137,19 +141,21 @@ def test_tomo_piecewise_pipeline():
 
     L = ns["rec"].sink_to_list()
 
+    ns["translation_position"].emit(0)
+    ns["rotation_position"].emit(1)
+    ns["dims"].emit((len(x_linspace), len(th_linspace)))
+
     ns["th_dim"].emit(len(th_linspace))
-    ns["x_dim"].emit(len(x_linspace))
     ns["th_extents"].emit([0, 180])
-    ns["x_extents"].emit([x_linspace[0], x_linspace[-1]])
     ns["center"].emit(2.5)
 
     # np.random.seed(42)
-
-    for x in x_linspace:
-        for th in th_linspace:
-            ns["x"].emit(x)
-            ns["th"].emit(th)
+    k = 0
+    for i, x in enumerate(x_linspace):
+        for j, th in enumerate(th_linspace):
+            ns["seq_num"].emit(k)
             ns["qoi"].emit(np.random.random())
+            k += 1
 
     assert len(L) == len(x_linspace) * len(th_linspace)
     assert L[-1].shape == (len(x_linspace), len(th_linspace))
@@ -201,49 +207,49 @@ def test_pca_pipeline():
 def test_amorphous_pipeline():
     pdf = Stream()
     ns = amorphsivity_pipeline(pdf)
-    L = ns['amorphsivity'].sink_to_list()
+    L = ns["amorphsivity"].sink_to_list()
     a = np.ones(10)
     pdf.emit(a)
     assert L[0] == np.sum(a[6:])
 
 
 def test_average_unique_data_pipeline():
-    start_ns = {k: Stream() for k in ['img', 'motors']}
-    ud_ns = unique_data(start_ns['motors'])
-    ns = average(norm_img=start_ns['img'], reset=ud_ns['unique'])
+    start_ns = {k: Stream() for k in ["img", "motors"]}
+    ud_ns = unique_data(start_ns["motors"])
+    ns = average(norm_img=start_ns["img"], reset=ud_ns["unique"])
 
-    L = ns['ave_img'].sink_to_list()
-    mul = ud_ns['unique'].sink_to_list()
-    icl = ns['img_count'].sink_to_list()
+    L = ns["ave_img"].sink_to_list()
+    mul = ud_ns["unique"].sink_to_list()
+    icl = ns["img_count"].sink_to_list()
 
     imgs = [np.random.random((2, 2)) for i in range(3)]
 
-    start_ns['img'].emit(imgs[0])
-    start_ns['motors'].emit({'hi': 'world'})
+    start_ns["img"].emit(imgs[0])
+    start_ns["motors"].emit({"hi": "world"})
 
     assert len(mul) == 0
     assert icl[-1] == 1
     assert len(L) == 1
     assert_allclose(L[-1], imgs[0])
 
-    start_ns['img'].emit(imgs[1])
-    start_ns['motors'].emit({'hi': 'world'})
+    start_ns["img"].emit(imgs[1])
+    start_ns["motors"].emit({"hi": "world"})
 
     assert len(mul) == 0
     assert icl[-1] == 2
     assert len(L) == 2
     assert_allclose(L[-1], (imgs[0] + imgs[1]) / 2)
 
-    start_ns['img'].emit(imgs[2])
-    start_ns['motors'].emit({'hi': 'new'})
+    start_ns["img"].emit(imgs[2])
+    start_ns["motors"].emit({"hi": "new"})
 
     assert len(mul) == 1
     assert icl[-1] == 3
     assert len(L) == 3
     assert_allclose(L[-1], (imgs[0] + imgs[1] + imgs[2]) / 3)
 
-    start_ns['img'].emit(imgs[0])
-    start_ns['motors'].emit({'hi': 'new'})
+    start_ns["img"].emit(imgs[0])
+    start_ns["motors"].emit({"hi": "new"})
 
     assert len(mul) == 1
     assert icl[-1] == 1

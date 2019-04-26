@@ -167,35 +167,40 @@ def tomo_pipeline_theta(qoi, theta, center, algorithm="gridrec", **kwargs):
     return locals()
 
 
-def tomo_prep(x, th, th_dim, x_dim, th_extents, x_extents, **kwargs):
+def tomo_prep(
+    th_dim,
+    th_extents,
+    seq_num,
+    dims,
+    translation_position,
+    rotation_position,
+    **kwargs,
+):
     """Preperation chunk for tomography, mostly munging positional data
        into array coordinates"""
     # dims -> (91, 44)
     # extents -> ([180, 0], [-8, 9.5])
-    x_ext = x_extents.zip(x_dim).map(flatten).starmap(np.linspace)
     th_ext = (
         th_extents.zip(th_dim)
         .map(flatten)
         .starmap(np.linspace)
         .map(np.deg2rad)
     )
-    x_pos = x.combine_latest(x_ext, emit_on=0).starmap(min_pos)
-    th_pos = (
-        th.map(np.deg2rad).combine_latest(th_ext, emit_on=0).starmap(min_pos)
+    # use np.unravel_index and seq_num to dead recon our position in the scan
+    pos = seq_num.combine_latest(dims, emit_on=0).starmap(np.unravel_index)
+    # pos.sink(print)
+    x_pos = pos.combine_latest(translation_position, emit_on=0).starmap(
+        lambda x, y: x[y]
+    )
+    # x_pos.sink(print)
+    th_pos = pos.combine_latest(rotation_position, emit_on=0).starmap(
+        lambda x, y: x[y]
     )
     return locals()
 
 
 def tomo_pipeline_piecewise(
-    qoi,
-    x_pos,
-    th_pos,
-    th_dim,
-    x_dim,
-    center,
-    th_ext,
-    algorithm="gridrec",
-    **kwargs,
+    qoi, x_pos, th_pos, center, th_ext, dims, algorithm="fbp", **kwargs
 ):
     """Perform a tomographic reconstruction on a QOI"""
     a = qoi.zip(th_pos, x_pos)
@@ -203,9 +208,7 @@ def tomo_pipeline_piecewise(
     # This is created at the start document and bypasses the fill_sinogram
     # function
     # TODO: make a function for the np.ones
-    th_dim.zip(x_dim).starmap(lambda th, x: np.ones((th, x))).sink(
-        lambda x: setattr(sinogram, "state", x)
-    )
+    dims.map(np.ones).sink(lambda x: setattr(sinogram, "state", x))
 
     rec = (
         sinogram.map(np.nan_to_num)
